@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Deduplicator / Debloater (Offline)</title>
+  <style>
+    /* Minimal “Bootstrap-like” styling embedded for offline single-file use */
+    :root{
+      --bs-body-bg:#f8f9fa;
+      --bs-body-color:#212529;
+      --bs-border-color:#dee2e6;
+      --bs-primary:#0d6efd;
+      --bs-primary-hover:#0b5ed7;
+      --bs-secondary:#6c757d;
+      --bs-secondary-hover:#5c636a;
+      --bs-white:#fff;
+      --bs-muted:#6c757d;
+      --bs-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+      --bs-radius: .5rem;
+      --bs-radius-sm: .375rem;
+      --bs-font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:var(--bs-font);
+      background:var(--bs-body-bg);
+      color:var(--bs-body-color);
+    }
+    .min-vh-100{ min-height:100vh; }
+    .d-flex{ display:flex; }
+    .align-items-center{ align-items:center; }
+    .justify-content-center{ justify-content:center; }
+    .p-3{ padding:1rem; }
+    .w-100{ width:100%; }
+    .container{
+      width:min(920px, 92vw);
+    }
+    .card{
+      background:var(--bs-white);
+      border:1px solid var(--bs-border-color);
+      border-radius:var(--bs-radius);
+      box-shadow: var(--bs-shadow);
+      overflow:hidden;
+    }
+    .card-body{ padding:1rem; }
+    .mb-2{ margin-bottom:.5rem; }
+    .mb-3{ margin-bottom:1rem; }
+    .mt-2{ margin-top:.5rem; }
+    .text-muted{ color:var(--bs-muted); }
+    .small{ font-size:.875rem; }
+    .label{
+      font-weight:600;
+      margin-bottom:.35rem;
+      display:flex;
+      gap:.5rem;
+      align-items:baseline;
+    }
+    textarea.form-control{
+      width:100%;
+      min-height:230px;
+      resize:vertical;
+      padding:.75rem .85rem;
+      border:1px solid var(--bs-border-color);
+      border-radius:var(--bs-radius-sm);
+      font: 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      outline:none;
+      background:#fff;
+    }
+    textarea.form-control:focus{
+      border-color: rgba(13,110,253,.65);
+      box-shadow: 0 0 0 .2rem rgba(13,110,253,.20);
+    }
+    .row{
+      display:flex;
+      gap:.75rem;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    .btn{
+      border:1px solid transparent;
+      border-radius: .5rem;
+      padding:.85rem 1.25rem;
+      font-weight:700;
+      cursor:pointer;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:.5rem;
+      line-height:1;
+      transition: transform .02s ease, background-color .15s ease, border-color .15s ease;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn-primary{
+      background:var(--bs-primary);
+      border-color:var(--bs-primary);
+      color:#fff;
+      min-width:min(560px, 78vw);
+      font-size:1.25rem;
+      padding:1rem 1.25rem;
+    }
+    .btn-primary:hover{ background:var(--bs-primary-hover); border-color:var(--bs-primary-hover); }
+    .btn-secondary{
+      background:#e9ecef;
+      border-color:#ced4da;
+      color:#111;
+      padding:1rem 1rem;
+      min-width:64px;
+      font-weight:700;
+    }
+    .btn-secondary:hover{ background:#dde2e6; }
+    .toolbar{
+      margin:.25rem 0 1rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:.75rem;
+      flex-wrap:wrap;
+    }
+    .options{
+      display:flex;
+      gap:1rem;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top:.25rem;
+    }
+    .form-check{
+      display:flex;
+      align-items:center;
+      gap:.45rem;
+      font-size:.95rem;
+      user-select:none;
+    }
+    .form-check input{ width:1.05rem; height:1.05rem; }
+    .stats{
+      display:flex;
+      justify-content:center;
+      gap:.75rem;
+      flex-wrap:wrap;
+      margin-top:.25rem;
+    }
+    .badge{
+      border:1px solid var(--bs-border-color);
+      background:#f1f3f5;
+      border-radius:999px;
+      padding:.35rem .65rem;
+      font-size:.9rem;
+    }
+    .kbd{
+      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      border:1px solid var(--bs-border-color);
+      background:#fff;
+      border-bottom-color:#cfd4da;
+      border-radius:.35rem;
+      padding:.15rem .35rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="min-vh-100 d-flex align-items-center justify-content-center p-3">
+    <div class="container w-100">
+      <div class="card">
+        <div class="card-body">
+
+          <div class="mb-3">
+            <div class="label">
+              <span>Input text</span>
+              <span class="text-muted small">(one item per line)</span>
+            </div>
+            <textarea id="inputText" class="form-control" spellcheck="false" placeholder="Paste lines here..."></textarea>
+          </div>
+
+          <div class="toolbar">
+            <button id="debloatBtn" class="btn btn-primary" type="button" title="Remove duplicates + remove bonus lines">
+              Debloat!
+            </button>
+
+            <button id="copyBtn" class="btn btn-secondary" type="button" title="Copy result to clipboard">
+              <!-- simple copy icon -->
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H10V7h9v14z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="options">
+            <label class="form-check">
+              <input id="caseInsensitive" type="checkbox">
+              <span>Case-insensitive</span>
+            </label>
+            <label class="form-check">
+              <input id="keepBlanks" type="checkbox">
+              <span>Keep blank lines</span>
+            </label>
+            <label class="form-check">
+              <input id="preserveWhitespace" type="checkbox">
+              <span>Preserve whitespace</span>
+            </label>
+          </div>
+
+          <div class="stats" id="stats" aria-live="polite"></div>
+
+          <div class="mb-2 mt-2">
+            <div class="label">
+              <span>Bonus lines</span>
+              <span class="text-muted small">(lines listed here will be removed from the input too)</span>
+            </div>
+            <textarea id="bonusText" class="form-control" spellcheck="false" placeholder="Lines to remove (one per line)..."></textarea>
+          </div>
+
+          <div class="text-muted small" style="text-align:center;margin-top:.75rem;">
+            Tip: after pasting, press <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> to Debloat.
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function splitLines(text) {
+      // Keeps ordering; normalizes Windows newlines; no trimming here.
+      return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    }
+
+    function normalize(line, { caseInsensitive, preserveWhitespace }) {
+      const s = preserveWhitespace ? line : line.trim();
+      return caseInsensitive ? s.toLowerCase() : s;
+    }
+
+    function debloat() {
+      const inputEl = document.getElementById("inputText");
+      const bonusEl = document.getElementById("bonusText");
+
+      const caseInsensitive = document.getElementById("caseInsensitive").checked;
+      const keepBlanks = document.getElementById("keepBlanks").checked;
+      const preserveWhitespace = document.getElementById("preserveWhitespace").checked;
+
+      const inputLinesRaw = splitLines(inputEl.value);
+      const bonusLinesRaw = splitLines(bonusEl.value);
+
+      // Build removal set from bonus lines (ignore empty lines there)
+      const removeSet = new Set();
+      for (const l of bonusLinesRaw) {
+        const n = normalize(l, { caseInsensitive, preserveWhitespace });
+        if (n !== "") removeSet.add(n);
+      }
+
+      const seen = new Set();
+      const out = [];
+
+      let removedByBonus = 0;
+      let removedAsDup = 0;
+      let blanksRemoved = 0;
+
+      for (const originalLine of inputLinesRaw) {
+        const n = normalize(originalLine, { caseInsensitive, preserveWhitespace });
+
+        if (!keepBlanks && n === "") {
+          blanksRemoved++;
+          continue;
+        }
+
+        if (removeSet.has(n) && n !== "") {
+          removedByBonus++;
+          continue;
+        }
+
+        if (seen.has(n)) {
+          removedAsDup++;
+          continue;
+        }
+
+        seen.add(n);
+        out.push(preserveWhitespace ? originalLine : (n === "" ? "" : originalLine.trim()));
+      }
+
+      inputEl.value = out.join("\n");
+
+      // Stats
+      const beforeCount = inputLinesRaw.length;
+      const afterCount = out.length;
+
+      const statsEl = document.getElementById("stats");
+      statsEl.innerHTML = `
+        <span class="badge">Before: <b>${beforeCount}</b></span>
+        <span class="badge">After: <b>${afterCount}</b></span>
+        <span class="badge">Removed duplicates: <b>${removedAsDup}</b></span>
+        <span class="badge">Removed bonus: <b>${removedByBonus}</b></span>
+        <span class="badge">Removed blanks: <b>${blanksRemoved}</b></span>
+      `;
+    }
+
+    async function copyResult() {
+      const inputEl = document.getElementById("inputText");
+      const text = inputEl.value;
+
+      // Try modern Clipboard API first
+      try {
+        await navigator.clipboard.writeText(text);
+        flashButton("copyBtn", "Copied!");
+        return;
+      } catch (_) {
+        // Fallback for file:// contexts or blocked clipboard
+      }
+
+      // Fallback: select + execCommand
+      inputEl.focus();
+      inputEl.select();
+      try {
+        const ok = document.execCommand("copy");
+        flashButton("copyBtn", ok ? "Copied!" : "Copy failed");
+      } catch (e) {
+        flashButton("copyBtn", "Copy failed");
+      } finally {
+        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+      }
+    }
+
+    function flashButton(id, text) {
+      const btn = document.getElementById(id);
+      const oldTitle = btn.title;
+      btn.title = text;
+      btn.style.transform = "translateY(1px)";
+      setTimeout(() => { btn.style.transform = ""; }, 60);
+      setTimeout(() => { btn.title = oldTitle; }, 1200);
+    }
+
+    // Wire up UI
+    document.getElementById("debloatBtn").addEventListener("click", debloat);
+    document.getElementById("copyBtn").addEventListener("click", copyResult);
+
+    // Ctrl+Enter hotkey
+    document.addEventListener("keydown", (e) => {
+      const isEnter = (e.key === "Enter");
+      const isCtrl = (e.ctrlKey || e.metaKey);
+      if (isEnter && isCtrl) {
+        e.preventDefault();
+        debloat();
+      }
+    });
+  </script>
+</body>
+</html>
