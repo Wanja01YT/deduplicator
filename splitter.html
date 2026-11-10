@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Row Splitter (Offline)</title>
+  <style>
+    /* Same lightweight, Bootstrap-like design as the supplied HTML. */
+    :root{
+      --bs-body-bg:#f8f9fa;
+      --bs-body-color:#212529;
+      --bs-border-color:#dee2e6;
+      --bs-primary:#0d6efd;
+      --bs-primary-hover:#0b5ed7;
+      --bs-secondary:#6c757d;
+      --bs-white:#fff;
+      --bs-muted:#6c757d;
+      --bs-shadow:0 .5rem 1rem rgba(0,0,0,.15);
+      --bs-radius:.5rem;
+      --bs-radius-sm:.375rem;
+      --bs-font:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:var(--bs-font);background:var(--bs-body-bg);color:var(--bs-body-color)}
+    button,input,textarea{font:inherit}
+    .min-vh-100{min-height:100vh}
+    .d-flex{display:flex}
+    .align-items-center{align-items:center}
+    .justify-content-center{justify-content:center}
+    .p-3{padding:1rem}
+    .w-100{width:100%}
+    .container{width:min(920px,92vw)}
+    .card{background:var(--bs-white);border:1px solid var(--bs-border-color);border-radius:var(--bs-radius);box-shadow:var(--bs-shadow);overflow:hidden}
+    .card-body{padding:1rem}
+    .mb-3{margin-bottom:1rem}
+    .text-muted{color:var(--bs-muted)}
+    .small{font-size:.875rem}
+    .label{font-weight:600;margin-bottom:.35rem;display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+    textarea.form-control{
+      display:block;width:100%;min-height:230px;resize:vertical;padding:.75rem .85rem;
+      border:1px solid var(--bs-border-color);border-radius:var(--bs-radius-sm);
+      font:14px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      outline:none;background:#fff;color:var(--bs-body-color);
+    }
+    textarea.form-control:focus,.number-control:focus{border-color:rgba(13,110,253,.65);box-shadow:0 0 0 .2rem rgba(13,110,253,.20)}
+    .btn{
+      border:1px solid transparent;border-radius:.5rem;padding:.85rem 1.25rem;font-weight:700;
+      cursor:pointer;user-select:none;display:inline-flex;align-items:center;justify-content:center;
+      gap:.5rem;line-height:1;transition:transform .02s ease,background-color .15s ease,border-color .15s ease;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:var(--bs-primary);border-color:var(--bs-primary);color:#fff;min-width:min(560px,78vw);font-size:1.25rem;padding:1rem 1.25rem}
+    .btn-primary:hover{background:var(--bs-primary-hover);border-color:var(--bs-primary-hover)}
+    .btn-secondary{background:#e9ecef;border-color:#ced4da;color:#111;padding:.75rem 1rem;font-weight:700}
+    .btn-secondary:hover{background:#dde2e6}
+    .toolbar{margin:.25rem 0 1rem;display:flex;align-items:center;justify-content:center;gap:.75rem;flex-wrap:wrap}
+    .options{display:flex;gap:.65rem;justify-content:center;align-items:center;flex-wrap:wrap;margin:.25rem 0 1rem}
+    .number-label{font-weight:600;font-size:.95rem}
+    .number-control{width:88px;height:42px;padding:.5rem .65rem;border:1px solid var(--bs-border-color);border-radius:var(--bs-radius-sm);background:#fff;text-align:center;outline:none;font-weight:600}
+    .stats{display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin:.25rem 0 1rem}
+    .badge{border:1px solid var(--bs-border-color);background:#f1f3f5;border-radius:999px;padding:.35rem .65rem;font-size:.9rem}
+    .kbd{font:12px/1 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;border:1px solid var(--bs-border-color);background:#fff;border-bottom-color:#cfd4da;border-radius:.35rem;padding:.15rem .35rem}
+    .hint{text-align:center;margin-top:.75rem}
+    .error{text-align:center;color:#b02a37;font-size:.9rem;margin:.5rem 0}
+    .results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:.5rem}
+    .result-item{min-width:0}
+    .result-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin-bottom:.4rem}
+    .result-head .label{margin:0}
+    .result-item textarea.form-control{min-height:185px}
+    .copy-btn{padding:.55rem .75rem;font-size:.875rem;min-width:82px}
+    .copy-btn svg{width:17px;height:17px;fill:currentColor}
+    .section-title{font-weight:700;margin:1rem 0 .7rem;font-size:1.05rem}
+    .section-title:empty{display:none}
+    [hidden]{display:none!important}
+    @media (max-width:620px){
+      .container{width:100%}
+      .results{grid-template-columns:1fr}
+      .btn-primary{min-width:0;width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="min-vh-100 d-flex align-items-center justify-content-center p-3">
+    <main class="container w-100">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="label" for="inputText">
+              <span>Input text</span>
+              <span class="text-muted small">(one item per line)</span>
+            </label>
+            <textarea id="inputText" class="form-control" spellcheck="false" placeholder="Paste lines here..."></textarea>
+          </div>
+
+          <div class="options">
+            <label class="number-label" for="splitCount">Number of fields:</label>
+            <input id="splitCount" class="number-control" type="number" min="1" max="1000" step="1" value="2" inputmode="numeric" />
+          </div>
+
+          <div class="toolbar">
+            <button id="splitBtn" class="btn btn-primary" type="button" title="Distribute rows round-robin across the fields">Split!</button>
+          </div>
+          <div id="error" class="error" role="alert" hidden></div>
+          <div id="stats" class="stats" aria-live="polite" hidden></div>
+
+          <section id="outputSection" aria-label="Split results" hidden>
+            <div class="section-title">Output fields</div>
+            <div id="results" class="results"></div>
+          </section>
+
+          <div class="text-muted small hint">
+            Rows are assigned in rotation: 1st to Field A, 2nd to Field B, and so on. Duplicates and blank lines are kept.
+            Press <span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> to split.
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    'use strict';
+
+    const input = document.getElementById('inputText');
+    const countInput = document.getElementById('splitCount');
+    const splitBtn = document.getElementById('splitBtn');
+    const statsEl = document.getElementById('stats');
+    const resultsEl = document.getElementById('results');
+    const outputSection = document.getElementById('outputSection');
+    const errorEl = document.getElementById('error');
+
+    function makeBadge(label, number) {
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.append(label + ': ');
+      const value = document.createElement('b');
+      value.textContent = number.toLocaleString();
+      badge.append(value);
+      return badge;
+    }
+
+    // Blank lines, whitespace, duplicates, and row order are preserved.
+    // A trailing newline counts as a final blank row, so no input is silently dropped.
+    function getRows(text) {
+      return text === '' ? [] : text.replace(/\r\n?/g, '\n').split('\n');
+    }
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.hidden = !message;
+    }
+
+    function makeCopyIcon() {
+      const ns = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('aria-hidden', 'true');
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', 'M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H10V7h9v14z');
+      svg.append(path);
+      return svg;
+    }
+
+    async function copyText(text, sourceTextarea) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (_) { /* file:// may block the clipboard API */ }
+
+      // Fallback works in most browsers when opening the HTML directly from disk.
+      const previousFocus = document.activeElement;
+      sourceTextarea.focus();
+      sourceTextarea.select();
+      let success = false;
+      try { success = document.execCommand('copy'); } catch (_) {}
+      sourceTextarea.setSelectionRange(0, 0);
+      if (previousFocus && previousFocus !== sourceTextarea && typeof previousFocus.focus === 'function') {
+        previousFocus.focus();
+      }
+      return success;
+    }
+
+    function fieldName(index) {
+      // A, B, ... Z, AA, AB, etc.
+      let name = '';
+      let n = index + 1;
+      while (n > 0) {
+        n--;
+        name = String.fromCharCode(65 + (n % 26)) + name;
+        n = Math.floor(n / 26);
+      }
+      return name;
+    }
+
+    function renderGroup(index, rows) {
+      const fieldLabel = 'Field ' + fieldName(index);
+      const item = document.createElement('div');
+      item.className = 'result-item';
+
+      const head = document.createElement('div');
+      head.className = 'result-head';
+      const label = document.createElement('label');
+      label.className = 'label';
+      label.htmlFor = 'output-' + index;
+      const heading = document.createElement('span');
+      heading.textContent = fieldLabel;
+      const detail = document.createElement('span');
+      detail.className = 'text-muted small';
+      detail.textContent = '(' + rows.length.toLocaleString() + ' ' + (rows.length === 1 ? 'row' : 'rows') + ')';
+      label.append(heading, detail);
+
+      const textarea = document.createElement('textarea');
+      textarea.id = 'output-' + index;
+      textarea.className = 'form-control';
+      textarea.spellcheck = false;
+      textarea.readOnly = true;
+      textarea.value = rows.join('\n');
+      textarea.setAttribute('aria-label', fieldLabel + ' output');
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn btn-secondary copy-btn';
+      copyBtn.type = 'button';
+      copyBtn.title = 'Copy ' + fieldLabel;
+      const copyLabel = document.createElement('span');
+      copyLabel.textContent = 'Copy';
+      copyBtn.append(makeCopyIcon(), copyLabel);
+      copyBtn.addEventListener('click', async () => {
+        const ok = await copyText(textarea.value, textarea);
+        copyLabel.textContent = ok ? 'Copied!' : 'Failed';
+        window.setTimeout(() => { copyLabel.textContent = 'Copy'; }, 1500);
+      });
+
+      head.append(label, copyBtn);
+      item.append(head, textarea);
+      return item;
+    }
+
+    function splitRows() {
+      showError('');
+      const rawCount = countInput.value.trim();
+      const numberOfFields = Number(rawCount);
+      if (!rawCount || !Number.isSafeInteger(numberOfFields) || numberOfFields < 1 || numberOfFields > 1000) {
+        showError('Enter a whole number between 1 and 1,000.');
+        return;
+      }
+
+      const rows = getRows(input.value);
+      // Round-robin: the nth row goes into group (n % numberOfFields).
+      // This keeps each output in input order and makes group sizes differ by at most one.
+      const groups = Array.from({ length: numberOfFields }, () => []);
+      rows.forEach((row, index) => {
+        groups[index % numberOfFields].push(row);
+      });
+
+      const fragment = document.createDocumentFragment();
+      groups.forEach((group, index) => {
+        fragment.append(renderGroup(index, group));
+      });
+
+      resultsEl.replaceChildren(fragment);
+      statsEl.replaceChildren(
+        makeBadge('Total rows', rows.length),
+        makeBadge('Fields', numberOfFields),
+        makeBadge('Rows assigned', groups.reduce((total, group) => total + group.length, 0))
+      );
+      statsEl.hidden = false;
+      outputSection.hidden = false;
+    }
+
+    splitBtn.addEventListener('click', splitRows);
+    countInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); splitRows(); }
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        splitRows();
+      }
+    });
+  </script>
+</body>
+</html>
